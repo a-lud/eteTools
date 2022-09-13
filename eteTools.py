@@ -50,9 +50,7 @@ def getArgs():
         metavar="/path/to/input",
     )
     parser.add_argument(
-        "outdir", 
-        help="Pipeline output directory",
-        metavar="/path/to/outdir"
+        "outdir", help="Pipeline output directory", metavar="/path/to/outdir"
     )
 
     # Optional argument - specify directories (models)
@@ -68,11 +66,11 @@ def getArgs():
     return args
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     args = getArgs()
     outdirs = utility.listDirs(args.input)
-    
+
     # Get summary information
     pd_lrt, dict_summary, pd_branches = utility.parseCodeMl(outdirs)
 
@@ -80,9 +78,9 @@ if __name__ == '__main__':
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
 
     utility.summaryDictToCsv(dict_summary, args.outdir)
-    pd_lrt.to_csv(path_or_buf=os.path.join(args.outdir, 'lrt.csv'), index=False)
-    pd_branches.to_csv(path_or_buf=os.path.join(args.outdir, 'branches.csv'), index=False)
-    
-    logging.info('Finished')
+    pd_lrt.to_csv(path_or_buf=os.path.join(args.outdir, "lrt.csv"), index=False)
+    pd_branches.to_csv(
+        path_or_buf=os.path.join(args.outdir, "branches.csv"), index=False
+    )
 
-    
+    logging.info("Finished")
