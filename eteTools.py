@@ -27,8 +27,11 @@ if __name__ == "__main__":
 
     utility.summaryDictToCsv(dict_summary, args.outdir)
     pd_lrt.to_csv(path_or_buf=os.path.join(args.outdir, "lrt.csv"), index=False)
-    pd_branches.to_csv(
-        path_or_buf=os.path.join(args.outdir, "branches.csv"), index=False
-    )
+    if not pd_branches.empty:
+        pd_branches.to_csv(
+            path_or_buf=os.path.join(args.outdir, "branches.csv"), index=False
+        )
+    else:
+        logging.warning('Branches data frame empty. Will not write any file.')
 
     logging.info("Finished")
