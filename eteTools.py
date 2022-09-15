@@ -2,12 +2,12 @@
 
 # This script is designed to take as input a list of CodeML output files/directories
 # and return a single table for comparisons.
-from lib import utility
-import os
-from pathlib import Path
 import argparse
 import logging
+import os
+from pathlib import Path
 
+from lib import utility
 
 # --------------------------------------------------------------------------- #
 # Logging information
