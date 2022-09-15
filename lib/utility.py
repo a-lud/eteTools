@@ -1,13 +1,53 @@
 import logging
-from lib import EteResults
-from pathlib import PurePath
-from os import scandir
-from os import path
 import re
+from os import path, scandir
+from pathlib import PurePath
+
 import pandas as pd
 from Bio.Phylo.PAML import codeml
 
-from collections import defaultdict
+from lib import EteResults
+
+
+def getArgs():
+    """Get user arguments and set up parser"""
+    desc = """\
+    # -------------------------------------------------------- #
+    #                ETE3 Evol output-to-table                 #
+    # -------------------------------------------------------- #
+
+    This is a simple script that parses the output of ETE3 evol
+    and returns a series of informative tables. This tool
+    provides a little more flexibility than just using the std-
+    out from the ETE3 evol tool.
+
+    ------------------------------------------------------------
+    """
+
+    epi = """\
+    Code written by Alastair J. Ludington
+    University of Adelaide
+    2022
+    """
+
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=desc,
+        epilog=epi,
+    )
+
+    # Required, positional input file arguments
+    parser.add_argument(
+        "input",
+        help="Directory path to ETE3 evol results",
+        metavar="/path/to/input",
+    )
+    parser.add_argument(
+        "outdir", help="Pipeline output directory", metavar="/path/to/outdir"
+    )
+
+    args = parser.parse_args()
+    return args
 
 
 def listDirs(path):
@@ -142,10 +182,15 @@ def getBranchResults(input, file):
 
 
 def buildSummaryTable(input):
-    """Build a summary Pandas table for each model class."""
+    """Build a summary Pandas table for each model class. Empty fields will be removed"""
+
+    # 1. clean dict of empty values
     ret = {}
     for key, value in input.items():
-        ret[key] = pd.concat(value)
+        if len(value) == 0:
+            continue
+        else:
+            ret[key] = pd.concat(value)
     return ret
 
 
@@ -161,7 +206,15 @@ def mergeSummaryDicts(input):
 
     # Concatenate all dataframes for each key
     for key, value in ret.items():
-        ret[key] = pd.concat(value)
+        if len(value) == 0:
+            continue
+        else:
+            ret[key] = pd.concat(value)
+
+    # Remove empty keys
+    keys_to_pop = [k for k, v in ret.items() if len(v) == 0]
+    for key in keys_to_pop:
+        ret.pop(key, None)
 
     return ret
 

@@ -1,6 +1,9 @@
-from lib import utility
+import logging
+
 import pandas as pd
 from scipy import stats
+
+from lib import utility
 
 
 class EteResults:
@@ -31,6 +34,33 @@ class EteResults:
             "b_neut": ["bsA", "bsA1", "bsC", "bsD", "b_free"],
         }
 
+        # Subset null_alt dict for null models we actually have data for
+        try:
+            null_alt = {k: null_alt[k] for k in self.models}
+        except Exception as e:
+            logging.error("Error at %s", exc_info=e)
+
+        # Now subset the dict for only alt models that we have data for
+        keys_to_pop = []
+        for null, alternates in null_alt.items():
+            intersect = list(set(self.models) & set(alternates))
+
+            if len(intersect) == 0:
+                keys_to_pop.append(null)
+            else:
+                null_alt[null] = intersect
+
+        # Remove Null models when there are no comparisons that can be made
+        for key in keys_to_pop:
+            null_alt.pop(key, None)
+
+        # Exit early if dict is empty
+        if not null_alt:
+            logging.warning(
+                "No LRT statistics can be run based on the provided models. Returning empty data frame."
+            )
+            return pd.DataFrame()
+
         # 1. Build dictionary of information required for LRT statistic
         codeml = {}
         for model in self.codeml:
@@ -55,12 +85,11 @@ class EteResults:
         lrt_list = []
         for model in self.models:
             if model in null_alt.keys():
-                # keep only comparisons that we have data for
+                # Get the CodeML dict for alternate models
                 alt_models = {key: codeml[key] for key in null_alt[model]}
 
-                # LRT statistic for null_model to all alt_models
+                # LRT statistic
                 for key, values in alt_models.items():
-
                     df_alt = int(values["np"])
                     df_null = int(codeml[model]["np"])
 
@@ -106,8 +135,11 @@ class EteResults:
                             )
                         )
 
+            else:
+                continue
+
         # Concatenate all model comparisons into a single data frame (by alignment)
-        lrt = pd.concat(lrt_list)
+        lrt = pd.concat(lrt_list) if len(lrt_list) > 1 else lrt_list[0]
         return lrt
 
     def getSummary(self):
@@ -256,4 +288,7 @@ class EteResults:
                     summary[modelType].append(pd.concat([data, tmp], axis=1))
 
         # Return summary tables dict and single branch df
-        return utility.buildSummaryTable(summary), pd.concat(branch)
+        return (
+            utility.buildSummaryTable(summary),
+            pd.concat(branch) if len(branch) > 1 else pd.DataFrame(),
+        )
