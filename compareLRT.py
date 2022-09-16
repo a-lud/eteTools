@@ -92,7 +92,6 @@ def compareLRT(bs, site, pval, outcsv):
 
     # Left-join dataframes on sample ID
     pd_merged = pd.merge(pd_bs, pd_site, on="file")
-    print(pd_merged)
 
     # Outcomes
     conditions = [
@@ -113,7 +112,7 @@ def compareLRT(bs, site, pval, outcsv):
     pd_merged["signal"] = np.select(conditions, values)
 
     # Write output file
-    pd_merged.to_csv(outcsv)
+    pd_merged.to_csv(outcsv, index=False)
 
 
 if __name__ == "__main__":
