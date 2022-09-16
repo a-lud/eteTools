@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
-import logging
 import argparse
+import logging
 
 import numpy as np
 import pandas as pd
