@@ -107,6 +107,7 @@ class EteResults:
                                         "null": model,
                                         "alt": key,
                                         "df": degFree,
+                                        "lrt": "",
                                         "pval": "",
                                         "note": "lnl1 < lnl0",
                                     }
@@ -128,6 +129,7 @@ class EteResults:
                                         "null": model,
                                         "alt": key,
                                         "df": degFree,
+                                        "lrt": diff,
                                         "pval": pval,
                                         "note": "",
                                     }
