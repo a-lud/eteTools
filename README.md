@@ -45,8 +45,6 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -m [MODELS ...], --models [MODELS ...]
-                        Pass directories (models) you want to parse data for
 
     Code written by Alastair J. Ludington
     University of Adelaide
