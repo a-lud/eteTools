@@ -51,15 +51,18 @@ def getArgs():
     parser.add_argument(
         "branchsite",
         help="File path to Branch-Site models summary CSV",
-        metavar="/path/to/model-branch-site.csv",
+        metavar="/path/to/codeml/lrt.csv",
     )
     parser.add_argument(
         "site",
         help="File path to Site models summary CSV",
-        metavar="/path/to/model-site.csv",
+        metavar="/path/to/dropout/lrt.csv",
     )
     parser.add_argument(
-        "outcsv", help="Pipeline output directory", metavar="/path/to/out.csv"
+        "outcsv", 
+        help="Pipeline output directory (default: %(default)s).", 
+        metavar="/path/to/out.csv",
+        default="fg-dropout-comparison.csv"
     )
 
     parser.add_argument(
