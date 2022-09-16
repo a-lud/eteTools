@@ -36,9 +36,9 @@ class EteResults:
 
         # Subset null_alt dict for null models we actually have data for
         try:
-            null_alt = {k: null_alt[k] for k in self.models}
+            null_alt = {k: null_alt[k] for k in self.models if k in null_alt.keys()}
         except Exception as e:
-            logging.error("Error at %s", exc_info=e)
+            logging.error(e, exc_info=e)
 
         # Now subset the dict for only alt models that we have data for
         keys_to_pop = []
