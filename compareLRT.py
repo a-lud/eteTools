@@ -116,13 +116,6 @@ def compareLRT(bs, site, pval, outcsv):
 
 
 if __name__ == "__main__":
-    # 1. read in data csv files
-    # 2. Filter null and alt columns for respective model comparisons
-    # 3. compare LRT of BS to Sites
-    #   - BS < alpha < Site
-    #   - BS & Site < alpha - not what we want
-    #   - Site < alpha < BS - not what we want
-    #   - alpha < BS & Site
 
     args = getArgs()
     compareLRT(args.branchsite, args.site, args.pvalue, args.outcsv)
