@@ -338,13 +338,14 @@ def getBebSite(rst, gene, model):
             names=["pos", "aa", "prob", "mean_w", "tmp", "err"],
         ).drop("tmp", axis=1)
 
-        df = df[df["aa"] != "-"]
-        df = df[df["prob"].str.contains("\*\*")]
-
-        if len(df) > 0:
-            df["prob"] = float(df["prob"].str.strip("\*\*"))
-            df.insert(loc=0, column="Gene", value=gene)
-            df.insert(loc=1, column="model", value=model)
-            return df
+        if len(df) != 1:
+            df = df[df["aa"] != "-"]
+            if str(df["prob"].dtypes) != "float64":
+                df = df[df["prob"].str.contains("\*\*")]
+                if not df.empty:
+                    df["prob"] = df["prob"].str.strip("\*\*")
+                    df.insert(loc=0, column="Gene", value=gene)
+                    df.insert(loc=1, column="model", value=model)
+                    return df
         else:
             return pd.DataFrame()
