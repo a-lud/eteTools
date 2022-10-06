@@ -20,7 +20,7 @@ information. It then uses this information to:
 
 - Perform LRT statistics for all valid comparisons (comparisons the same as those from `ETE3 evol`)
 - Create concatenated summary tables for each model type
-- Report the sites under selection (BEB) - TODO
+- Report the sites under selection (BEB >= 0.99)
 
 For usage examples, simply call the help page:
 
