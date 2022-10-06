@@ -16,7 +16,7 @@ class EteResults:
         self.path = path
         self.name = utility.getName(path)
         self.models = utility.getModels(path)
-        self.codeml = utility.readCodemlOut(path)
+        self.codeml = utility.readCodemlOut(path, self.name)
 
     def getLRT(self):
         """Build a table from the CodeML results for each model"""
@@ -294,3 +294,13 @@ class EteResults:
             utility.buildSummaryTable(summary),
             pd.concat(branch) if len(branch) > 1 else pd.DataFrame(),
         )
+
+    def getSites(self):
+        """Get the BEB table from the CodeML dictionary. Concatenate dataframes belonging
+        to the same gene and return a pandas dataframe."""
+        # Iterate over CodeML keys (models)
+        dfs = []
+        for model in self.codeml:
+            dfs.append(self.codeml[model]["BEB"])
+
+        return pd.concat(dfs)

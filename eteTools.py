@@ -20,7 +20,7 @@ if __name__ == "__main__":
     outdirs = utility.listDirs(args.input)
 
     # Get summary information
-    pd_lrt, dict_summary, pd_branches = utility.parseCodeMl(outdirs)
+    pd_lrt, dict_summary, pd_branches, pd_beb = utility.parseCodeMl(outdirs)
 
     # Write tables to file
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
@@ -32,6 +32,8 @@ if __name__ == "__main__":
             path_or_buf=os.path.join(args.outdir, "branches.csv"), index=False
         )
     else:
-        logging.warning('Branches data frame empty. Will not write any file.')
+        logging.warning("Branches data frame empty. Will not write any file.")
+
+    pd_beb.to_csv(path_or_buf=os.path.join(args.outdir, "beb.csv"), index=False)
 
     logging.info("Finished")

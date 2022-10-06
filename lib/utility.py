@@ -1,4 +1,5 @@
 import argparse
+import io
 import logging
 import re
 from os import path, scandir
@@ -86,7 +87,7 @@ def getModels(path):
     return models
 
 
-def readCodemlOut(path):
+def readCodemlOut(path, gene):
     """Read CodeML outputs into dictionary structures for current MSA"""
     dirs = listDirs(path)
 
@@ -112,6 +113,23 @@ def readCodemlOut(path):
             np = parseNp(st=match)
 
         cml["np"] = np
+
+        # Also get BEB information while I'm at it
+        model_types = {"site": ["M2", "M8"], "branch-site": ["bsA"]}
+        modelType = [k for k, v in model_types.items() if m in v]
+        if len(modelType) > 0:
+            match modelType[0]:
+                case "branch-site":
+                    beb = getBebBs(f"{model.path}/rst", gene, m)
+                    cml["BEB"] = beb
+                case "site":
+                    beb = getBebSite(f"{model.path}/rst", gene, m)
+                    cml["BEB"] = beb
+                case _:
+                    cml["BEB"] = pd.DataFrame()
+        else:
+            cml["BEB"] = pd.DataFrame()
+
         cml_dict[m] = cml
 
     return cml_dict
@@ -229,22 +247,104 @@ def parseCodeMl(input):
     lrt = []
     branches = []
     summary = []
+    beb = []
 
     # Iterate over each ortholog output directory
     for outdir in input:
         l = EteResults.EteResults(outdir.path).getLRT()
         s, b = EteResults.EteResults(outdir.path).getSummary()
+        d = EteResults.EteResults(outdir.path).getSites()
 
         # Append to branches list object
         lrt.append(l)
         summary.append(s)
         branches.append(b)
+        beb.append(d)
 
     # Return LRT table, summary dicts by model type and concatenated branch dataframe
-    return pd.concat(lrt), mergeSummaryDicts(summary), pd.concat(branches)
+    return (
+        pd.concat(lrt),
+        mergeSummaryDicts(summary),
+        pd.concat(branches),
+        pd.concat(beb),
+    )
 
 
 def summaryDictToCsv(input, outdir):
     """Write to file each table in the summary dictionary, using the key as the filename."""
     for key, table in input.items():
         table.to_csv(path_or_buf=path.join(outdir, f"model-{key}.csv"), index=False)
+
+
+def getBebBs(rst, gene, model):
+    """Identify BEB sites that have a posterior-probability >=0.99 from Branch-Site outputs."""
+    with open(rst, "r") as file:
+        lines = file.readlines()
+        idx_start = [
+            lines.index(i) + 3 for i in lines if i.startswith("Bayes Empirical Bayes")
+        ][0]
+        idx_end = len(lines)
+
+        # Subset for BEB lines
+        sub_lines = lines[int(idx_start) : int(idx_end)]
+        sub_lines = [re.sub("\s+", ",", i.lstrip().rstrip()) for i in sub_lines]
+
+        # Convert to dataframe
+        df = pd.read_csv(
+            io.StringIO("\n".join(sub_lines)),
+            header=None,
+            names=["pos", "aa", "0", "1", "2a", "2b", "5", "6"],
+        ).drop(["5", "6"], axis=1)
+
+        # Insert orthogroup ID as first column
+        df.insert(loc=0, column="Gene", value=gene)
+        df.insert(loc=1, column="model", value=model)
+
+        # Add the 2a and 2b rate classes to get BEB value
+        df["prob"] = df["2a"] + df["2b"]
+
+        # Filter for missing data/gaps
+        df = df[df["aa"] != "-"]
+
+        # Select columns
+        df = df[["Gene", "model", "pos", "aa", "prob"]]
+
+        if any(df["prob"] >= 0.99):
+            return df[df["prob"] >= 0.99]
+        else:
+            return pd.DataFrame()
+
+
+def getBebSite(rst, gene, model):
+    """Identify BEB sites that have a posterior-probability >=0.99 from Site outputs."""
+    with open(rst, "r") as file:
+        lines = file.readlines()
+
+        # Get BEB line - removes everything before it
+        tmp = [lines.index(i) for i in lines if "(BEB)" in i][0]
+        lines = lines[tmp:]
+
+        # Now get potential positively selected sites
+        idx_start = [lines.index(i) + 2 for i in lines if "Prob(w>1)" in i][0]
+        idx_end = len(lines)
+
+        sub_lines = lines[int(idx_start) : int(idx_end)]
+        sub_lines = [re.sub("\s+", ",", i.lstrip().rstrip()) for i in sub_lines]
+
+        # Convert to dataframe
+        df = pd.read_csv(
+            io.StringIO("\n".join(sub_lines)),
+            header=None,
+            names=["pos", "aa", "prob", "mean_w", "tmp", "err"],
+        ).drop("tmp", axis=1)
+
+        df = df[df["aa"] != "-"]
+        df = df[df["prob"].str.contains("\*\*")]
+
+        if len(df) > 0:
+            df["prob"] = float(df["prob"].str.strip("\*\*"))
+            df.insert(loc=0, column="Gene", value=gene)
+            df.insert(loc=1, column="model", value=model)
+            return df
+        else:
+            return pd.DataFrame()
