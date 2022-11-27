@@ -17,10 +17,12 @@ logging.basicConfig(
 if __name__ == "__main__":
 
     args = utility.getArgs()
-    outdirs = utility.listDirs(args.input)
+    etedirs = utility.listDirs(
+        args.input
+    )  # [<DirEntry 'OGID'>, <DirEntry 'OGID'>, ...]
 
-    # Get summary information
-    pd_lrt, dict_summary, pd_branches, pd_beb = utility.parseCodeMl(outdirs)
+    # Summary objects for all orthologs
+    pd_lrt, dict_summary, pd_branches, pd_beb = utility.parseCodeMl(etedirs)
 
     # Write tables to file
     Path(args.outdir).mkdir(parents=True, exist_ok=True)
