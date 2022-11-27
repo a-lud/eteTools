@@ -2,8 +2,9 @@ import argparse
 import io
 import logging
 import re
-from os import path, scandir
+from os import DirEntry, path, scandir
 from pathlib import PurePath
+from typing import Dict, List
 
 import pandas as pd
 from Bio.Phylo.PAML import codeml
@@ -43,38 +44,34 @@ def getArgs():
         "input",
         help="Directory path to ETE3 evol results",
         metavar="/path/to/input",
+        type=str,
     )
+
     parser.add_argument(
-        "outdir", help="Pipeline output directory", metavar="/path/to/outdir"
+        "outdir", help="Pipeline output directory", metavar="/path/to/outdir", type=str
     )
 
     args = parser.parse_args()
     return args
 
 
-def listDirs(path):
+def listDirs(path: str):
     """Return the sub-directories in the user provided input path. These
     sub-directories should correspond to the MSA/Genes that were run, with
     each sub-directory containing the CodeML model outputs."""
-    subdirs = []
+    subdirs: List[DirEntry] = []
     [subdirs.append(f) for f in scandir(path) if f.is_dir()]
     return subdirs
 
 
-def getName(path):
-    """Get the name of the current MSA"""
-    path_split = PurePath(path).parts
-    return path_split[-1]
-
-
-def getModels(path):
+def getModels(path: str):
     """Get the models that were run for each gene. ETE3 evol uses
     the model as the prefix of the output directory."""
     dirs = listDirs(path)
 
     # Iterate over each model and parse first section before
     # tilde
-    models = []
+    models: List[str] = []
     for d in dirs:
         tmp = d.name.split("~", 1)[0]
 
@@ -87,14 +84,16 @@ def getModels(path):
     return models
 
 
-def readCodemlOut(path, gene):
+def readCodemlOut(path: str, gene: str):
     """Read CodeML outputs into dictionary structures for current MSA"""
     dirs = listDirs(path)
 
     # Iterate over models
     cml_dict = {}
     for model in dirs:
-        m = model.name.split("~", 1)[0]
+
+        # Cleaning ETE3 naming (keeping ONLY the model name)
+        m: str = model.name.split("~", 1)[0]
 
         if "." in m:
             m = m.split(".", 1)[0]
@@ -135,13 +134,13 @@ def readCodemlOut(path, gene):
     return cml_dict
 
 
-def parseNp(st):
+def parseNp(st: str):
     """Extract the NP values from CodeML output"""
     ex = re.search(".+np:(.*)\\):.+", st).group(1).lstrip()
-    return ex
+    return int(ex)
 
 
-def getSiteClasses(input):
+def getSiteClasses(input: dict):
     """Convert the 'site classes' field into a pandas data frame for Site models."""
     lst_df = []
     for key, value in input.items():
@@ -152,7 +151,7 @@ def getSiteClasses(input):
     return df
 
 
-def getSiteClassesBranchSite(input):
+def getSiteClassesBranchSite(input: dict):
     """Convert the 'site classes' field into a pandas data frame for Branch-Site models."""
     df_lst = []
     for key, value in input.items():
@@ -169,7 +168,7 @@ def getSiteClassesBranchSite(input):
     return df
 
 
-def getSiteClassesClade(input):
+def getSiteClassesClade(input: dict):
     """Convert the 'site classes' field into a pandas data frame for Clade models."""
     df_lst = []
     for key, value in input.items():
@@ -189,7 +188,7 @@ def getSiteClassesClade(input):
     return df
 
 
-def getBranchResults(input, file):
+def getBranchResults(input: dict, file: str):
     """Build pandas dataframe from Branch information in CodeML output files for Null, Branch-Site and Site models"""
     branches_list = []
     for br, val in input.items():
@@ -200,7 +199,7 @@ def getBranchResults(input, file):
     return pd.concat(branches_list)
 
 
-def buildSummaryTable(input):
+def buildSummaryTable(input: Dict[str, list]):
     """Build a summary Pandas table for each model class. Empty fields will be removed"""
 
     # 1. clean dict of empty values
@@ -213,7 +212,7 @@ def buildSummaryTable(input):
     return ret
 
 
-def mergeSummaryDicts(input):
+def mergeSummaryDicts(input: List[dict]):
     """Given an list of dictionaries of arbitary length, append the 'values' of each dict
     into a list for matching keys."""
     ret = {"null": [], "site": [], "branch-site": [], "clade": [], "branch": []}
@@ -238,22 +237,26 @@ def mergeSummaryDicts(input):
     return ret
 
 
-def parseCodeMl(input):
+def parseCodeMl(input: List[DirEntry]):
     """Wrapper function for the functions that do all the work."""
 
     logging.info("[parseCodeMl] Building LRT, summary and branch tables")
 
     # Aggregated output structures
     lrt = []
-    branches = []
-    summary = []
-    beb = []
+    branches: List[pd.DataFrame] = []
+    summary: List[dict] = []
+    beb: List[pd.DataFrame] = []
 
     # Iterate over each ortholog output directory
-    for outdir in input:
-        l = EteResults.EteResults(outdir.path).getLRT()
-        s, b = EteResults.EteResults(outdir.path).getSummary()
-        d = EteResults.EteResults(outdir.path).getSites()
+    for orthDir in input:
+        # initialise EteResults object
+        curOrth = EteResults.EteResults(orthDir)
+
+        # Get the information for current ortholog
+        l = curOrth.getLRT()
+        s, b = curOrth.getSummary()
+        d = curOrth.getSites()
 
         # Append to branches list object
         lrt.append(l)
@@ -270,13 +273,13 @@ def parseCodeMl(input):
     )
 
 
-def summaryDictToCsv(input, outdir):
+def summaryDictToCsv(input: dict, outdir: str):
     """Write to file each table in the summary dictionary, using the key as the filename."""
     for key, table in input.items():
         table.to_csv(path_or_buf=path.join(outdir, f"model-{key}.csv"), index=False)
 
 
-def getBebBs(rst, gene, model):
+def getBebBs(rst: str, gene: str, model: str):
     """Identify BEB sites that have a posterior-probability >=0.99 from Branch-Site outputs."""
     with open(rst, "r") as file:
         lines = file.readlines()
@@ -315,7 +318,7 @@ def getBebBs(rst, gene, model):
             return pd.DataFrame()
 
 
-def getBebSite(rst, gene, model):
+def getBebSite(rst: str, gene: str, model: str):
     """Identify BEB sites that have a posterior-probability >=0.99 from Site outputs."""
     with open(rst, "r") as file:
         lines = file.readlines()
