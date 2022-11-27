@@ -1,4 +1,5 @@
 import logging
+from os import DirEntry
 
 import pandas as pd
 from scipy import stats
@@ -9,14 +10,15 @@ from lib import utility
 class EteResults:
     """EteResults class contains information relating to an ETE3 evol output directory"""
 
-    def __init__(self, path=""):
+    def __init__(self, entry: DirEntry):
         """Class to store the results from an ETE3 evol run. Expects that the
         parent directory is a unique name corresponding to the MSA that was
         used to generate the results - e.g. the ortholog identifier/gene name"""
-        self.path = path
-        self.name = utility.getName(path)
-        self.models = utility.getModels(path)
-        self.codeml = utility.readCodemlOut(path, self.name)
+        self.direntry = entry
+        self.path = entry.path
+        self.name = entry.name
+        self.models = utility.getModels(self.path)
+        self.codeml = utility.readCodemlOut(self.path, self.name)
 
     def getLRT(self):
         """Build a table from the CodeML results for each model"""
@@ -292,7 +294,7 @@ class EteResults:
         # Return summary tables dict and single branch df
         return (
             utility.buildSummaryTable(summary),
-            pd.concat(branch) if len(branch) > 1 else pd.DataFrame(),
+            pd.concat(branch) if len(branch) > 0 else pd.DataFrame(),
         )
 
     def getSites(self):
